@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Manipur University Students' Union Election Result 2026-27 - Live Portal</title>
+  <title>University Students' Union Election Results - Live Portal</title>
   <style>
     :root {
       --primary: #1a365d;
@@ -239,6 +239,12 @@
       border-color: var(--won-border);
     }
 
+    .candidate-row.nota-row {
+      background: #f8fafc;
+      border-style: dashed;
+      border-color: #cbd5e0;
+    }
+
     .cand-top {
       display: flex;
       justify-content: space-between;
@@ -264,6 +270,7 @@
     .pill-won { background: #38a169; color: #fff; }
     .pill-trailing { background: #e2e8f0; color: #4a5568; }
     .pill-waiting { background: #edf2f7; color: #718096; }
+    .pill-nota { background: #718096; color: #fff; }
 
     .cand-stats {
       display: flex;
@@ -276,6 +283,7 @@
     .margin-pos { color: #2b6cb0; }
     .won-margin { color: #2f855a; }
     .margin-neg { color: #c53030; }
+    .nota-label { color: var(--muted); font-weight: 500; font-size: 12px; }
 
     .progress-track {
       width: 100%;
@@ -371,14 +379,14 @@
 <body>
 
   <header>
-    <h1>Manipur University Students' Union Election Result 2026-27</h1>
-    <p>Live Booth-Wise Counting (Booths 1 – 15) &amp; Result Portal Developed by Goutam Elangbam (Dept of Geography)</p>
+    <h1>University Students' Union Election</h1>
+    <p>Live Booth-Wise Counting &amp; Official Result Portal (Booths 1 – 15)</p>
   </header>
 
   <div class="status-bar">
     <div class="live-indicator">
       <span class="pulse-dot"></span>
-      <span>LIVE COUNTING BOOTH TALLY</span>
+      <span>LIVE ECI-STYLE BOOTH TALLY</span>
     </div>
     <div class="refresh-info">
       <span id="last-updated">Connecting to live sheet...</span>
@@ -404,6 +412,10 @@
     let activeFilter = "ALL";
     let timerSeconds = 15;
     let openBoothTables = {};
+
+    function isNotaCandidate(name) {
+      return name.trim().toUpperCase() === "NOTA";
+    }
 
     function splitCSVLine(line) {
       const result = [];
@@ -550,12 +562,19 @@
         const isWaiting = boothsCounted === 0 && totalVotes === 0;
         const isDeclared = boothsCounted === TOTAL_BOOTHS;
 
-        const sorted = isWaiting
-          ? [...candidates]
-          : [...candidates].sort((a, b) => b.votes - a.votes);
+        // Separate regular candidates and NOTA so NOTA is always pinned at the bottom
+        const regularCandidates = candidates.filter(c => !isNotaCandidate(c.candidate));
+        const notaCandidates = candidates.filter(c => isNotaCandidate(c.candidate));
 
-        const highestVotes = sorted[0]?.votes || 0;
-        const runnerUpVotes = sorted[1]?.votes || 0;
+        const sortedRegular = isWaiting
+          ? [...regularCandidates]
+          : [...regularCandidates].sort((a, b) => b.votes - a.votes);
+
+        const sorted = [...sortedRegular, ...notaCandidates];
+
+        // Lead/Win margins are calculated strictly between human candidates
+        const highestVotes = sortedRegular[0]?.votes || 0;
+        const runnerUpVotes = sortedRegular[1]?.votes || 0;
 
         let badgeClass = "";
         let badgeLabel = `Live • ${boothsCounted}/${TOTAL_BOOTHS} Booths`;
@@ -569,12 +588,19 @@
 
         const candidatesHTML = sorted.map((cand, index) => {
           const pct = totalVotes > 0 ? ((cand.votes / totalVotes) * 100).toFixed(1) : "0.0";
+          const isNota = isNotaCandidate(cand.candidate);
+
           let rowClass = "";
           let pillClass = "pill-trailing";
           let pillText = "Trailing";
           let marginHTML = "";
 
-          if (isWaiting) {
+          if (isNota) {
+            rowClass = "nota-row";
+            pillClass = "pill-nota";
+            pillText = "NOTA";
+            marginHTML = `<span class="nota-label">None of the Above</span>`;
+          } else if (isWaiting) {
             pillClass = "pill-waiting";
             pillText = "Awaited";
             marginHTML = `<span>Counting not started</span>`;
@@ -660,7 +686,7 @@
               </table>
             </div>
             <div class="post-footer">
-              <span>Total Valid Votes Counted</span>
+              <span>Total Valid Votes Counted (incl. NOTA)</span>
               <strong>${totalVotes.toLocaleString()} Votes</strong>
             </div>
           </div>
